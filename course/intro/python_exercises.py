@@ -64,7 +64,8 @@ def parse_date(date_str):
         raise ValueError("Invalid date format")
 
 def greet():
-    print("Hello, World!")
+    """Write a function that PRINTS 'Hello, World!'"""
 
 def add_two_numbers(a, b):
-    return a + b
+    """Write a function that adds the numbers a and b"""
+    return 0
