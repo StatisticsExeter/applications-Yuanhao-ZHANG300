@@ -1,5 +1,4 @@
 # python_exercises.py
-import pandas as pd
 from datetime import datetime
 
 def sum_list(lst):
@@ -63,3 +62,9 @@ def parse_date(date_str):
         return dt.date()
     except Exception:
         raise ValueError("Invalid date format")
+
+def greet():
+    print("Hello, World!")
+
+def add_two_numbers(a, b):
+    return a + b
