@@ -1,0 +1,106 @@
+import hashlib
+import datetime
+import os
+import fitz
+
+repo_url = f"https://github.com/{os.environ.get('GITHUB_REPOSITORY', 'unknown/repo')}"
+run_id = os.environ.get("GITHUB_RUN_ID", "unknown")
+run_number = os.environ.get("GITHUB_RUN_NUMBER", "unknown")
+workflow_name = os.environ.get("GITHUB_WORKFLOW", "unknown")
+commit_sha = os.environ.get("GITHUB_SHA", "unknown")
+
+source_file = "course/intro/python_exercises.py"
+test_intro_output = "intro_tests_output.txt"
+linter_output = "intro_flake8_output.txt"
+doit_output = "intro_pipeline_output.txt"
+
+
+regression_tests_output = "regression_tests_output.txt"
+supervised_tests_output = "supervised_tests_output.txt"
+unsupervised_tests_output = "unsupervised_tests_output.txt"
+regression_flake8_output = "regression_flake8_output.txt"
+supervised_flake8_output = "supervised_flake8_output.txt"
+unsupervised_flake8_output = "unsupervised_flake8_output.txt"
+dodo_flake8_output = "dodo_flake8_output.txt"
+
+
+def compute_checksum(filepath):
+    sha256 = hashlib.sha256()
+    with open(filepath, 'rb') as f:
+        while chunk := f.read(8192):
+            sha256.update(chunk)
+    return sha256.hexdigest()
+
+
+def read_file(filepath):
+    if os.path.exists(filepath):
+        with open(filepath, 'r') as f:
+            return f.read()
+    return f"File not found: {filepath}\n"
+
+
+checksum = compute_checksum(source_file)
+date_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+intro_tests = read_file(test_intro_output)
+linter = read_file(linter_output)
+doit = read_file(doit_output)
+
+regression_tests = read_file(regression_tests_output)
+supervised_tests = read_file(supervised_tests_output)
+unsupervised_tests = read_file(unsupervised_tests_output)
+regression_flake8 = read_file(regression_flake8_output)
+supervised_flake8 = read_file(supervised_flake8_output)
+unsupervised_flake8 = read_file(unsupervised_flake8_output)
+dodo_flake8_output = read_file(dodo_flake8_output)
+
+
+report = f"""
+CI Report
+
+Repository URL: {repo_url}
+Date and Time: {date_time}
+
+Workflow: {workflow_name}
+Run Number: {run_number}
+Run ID: {run_id}
+Commit SHA: {commit_sha}
+
+
+Checksum of {source_file}:
+{checksum}
+
+--- Intro Topic Test Results ---
+{intro_tests}
+
+--- Flake8 Linter Output ---
+{linter}
+
+---Doit pipeline Outout
+{doit}
+
+
+---Coursework checking---
+{regression_tests}
+{supervised_tests}
+{unsupervised_tests}
+{regression_flake8}
+{supervised_flake8}
+{unsupervised_flake8}
+{dodo_flake8_output}
+
+
+"""
+
+
+# Create multi-page PDF
+doc = fitz.open()
+lines = report.split('\n')
+lines_per_page = 40  # Adjust as needed
+
+for i in range(0, len(lines), lines_per_page):
+    page = doc.new_page()
+    chunk = '\n'.join(lines[i:i + lines_per_page])
+    page.insert_text((72, 72), chunk, fontsize=10)
+
+doc.save("ci_report.pdf")
+doc.close()

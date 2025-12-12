@@ -1,0 +1,100 @@
+#!/bin/bash
+set -euo pipefail
+
+function run_ict() {
+    echo "Running tests for Introduction to Python"
+    pytest course/intro/tests/test_exercises.py
+    pytest course/intro/tests/test_pipeline_functions.py
+    echo "Running linter on Introduction to Python"
+    flake8 course/intro
+    doit -f dodo_ict_unsupervised.py
+}
+
+function run_hello() {
+    echo "Running Hello, World test file"
+    pytest course/intro/tests/test_hello.py
+}
+
+function run_check() {
+    python course/run_checks.py
+}
+
+
+function run_ex() {
+    pytest course/exercises/tests/
+    flake8 course/exercises/
+}
+
+function run_cwk() {
+    echo "Running tests for coursework tasks"
+    pytest course/supervised_classification/tests
+    pytest course/regression/tests
+    pytest course/unsupervised_classification/tests
+    echo "Running linter on coursework tasks"
+    flake8 course/supervised_classification
+    flake8 course/unsupervised_classification
+    flake8 course/regression
+    echo "Running linter on pipeline files"
+    flake8 *.py
+}
+
+function run_demo() {
+    echo "Running demonstration pipeline"
+    doit -f dodo.py
+}
+
+function run_reports(){
+    echo "Running live version of coursework tasks"
+    doit run --single -f dodo_supervised.py
+    doit run --single -f dodo_unsupervised.py
+    doit run --single -f dodo_regression.py
+}
+
+function show_help() {
+    echo "Usage: $0 <command>"
+    echo
+    echo "Available commands:"
+    echo "  check        Run project checks, ensure your set up works"
+    echo "  hello        Display greeting message"
+    echo "  demo         Run demonstration pipeline"
+    echo "  ex           Run exercises"
+    echo "  ict          Run ICT pipeline"
+    echo "  cwk          Run tests and lint on coursework tasks"
+    echo "  reports      Run live coursework tasks (needs database connection). Run in Anaconda prompt"
+    echo "  help, --help Show this help message"
+    echo
+    echo "Example:"
+    echo "  $0 demo"
+}
+
+case "$1" in
+    help)
+        show_help
+        ;;
+    check)
+        run_check
+        ;;
+    hello)
+        run_hello
+        ;;
+    ex)
+        run_ex
+        ;;
+    ict)
+        run_ict
+        ;;
+    cwk)
+        run_cwk
+        ;;
+    demo)
+      run_demo
+      ;;
+    reports)
+      run_reports
+      ;;
+    *)
+        echo "Usage: $0 {check|ict|cwk|demo|reports|hello|help|ex}"
+        exit 1
+        ;;
+
+esac

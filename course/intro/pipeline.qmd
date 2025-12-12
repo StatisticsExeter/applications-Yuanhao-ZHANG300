@@ -1,0 +1,67 @@
+---
+title: "A demonstration pipeline"
+author: "Please complete"
+format: 
+  html:
+    embed-resources: true
+
+---
+
+## Quarto
+
+Quarto enables you to weave together content and executable code into a finished document. To learn more about Quarto see <https://quarto.org>.
+
+## Running Code
+
+When you click the **Render** button a document will be generated that includes both content and the output of embedded code. You can embed code like this:
+
+```{python}
+1 + 1
+```
+
+You can add options to executable code like this to hide the code you are executing.
+
+```{python}
+#| echo: false
+2 * 2
+```
+
+The `echo: false` option disables the printing of code (only output is displayed).
+
+
+We can either
+
+- Build up the code in these chunks so that we have a standalone reproducible analysis in a single document
+- Render a Quarto document which displays artefacts generated as part of a pipeline
+
+The latter is more complex, but allows us to work on individual parts of the pipeline more efficiently.
+
+Of course, we used `plotly` to generate a scatterplot, and saved it a folder `cache`. We can simply display this scatterplot:
+
+![](cache/scatterplot.html){width="100%" height="600px"}
+
+We also computed some metrics and saved the results in a text file. We need to read these text files into `Python` and render them using a code chunk.
+
+Here, we display the estimate of the correlation between Kerosene Sales in India and the Divorce Rate in Maine
+
+```{python}
+#| echo: false
+#| eval: true
+#| results: 'asis'
+with open("cache/correlation.txt") as f:
+    content = f.read()
+    print(content.replace("\\n", "\n"))
+```
+
+And we can also display the results of fitting a model where we try to predict the Divorce Rate in Maine based on Kerosene  sales.
+
+```{python}
+#| echo: false
+#| eval: true
+#| results: 'asis'
+with open("cache/regression_summary.txt") as f:
+    content = f.read()
+    print(content)
+```
+
+

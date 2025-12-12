@@ -1,0 +1,125 @@
+---
+title: "Clustering local authorities by road collision patterns"
+author: "Anonymous"
+format: 
+  html:
+    embed-resources: true
+
+---
+
+## Your task
+
+This material is provided as context to the problem. You should rewrite it as you see fit.  IN particular, you should demonstrate you understand why we are undertaking a cluster analysis, and what the various methods are telling us.  In particular, you should explain how principal components helps us visualise the results of the clustering.
+
+
+## The Problem
+
+Police recorded data in Great Britain is called "Stats19" and is available at <https://www.data.gov.uk/dataset/cb7ae6f0-4be6-4935-9277-47e5ce24a11f/road-accidents-safety-data>.  These data are typically split into three linked tables:
+
+- Accidents
+
+  Each row represents a single reported accident. Key fields include:
+
+  - Date and time
+  - Location (e.g. latitude/longitude, local authority)
+  - Road type and conditions
+  - Weather and lighting
+  - Number of vehicles and casualties
+
+- Vehicles
+
+  Each row represents a vehicle involved in an accident. Includes:
+
+  - Vehicle type and age
+  - Manoeuvre and direction
+  - Driver age and sex
+
+- Casualties
+  
+  Each row represents a person injured or killed. Includes:
+
+  - Casualty type (pedestrian, cyclist, driver, etc.)
+  - Severity (slight, serious, fatal)
+  - Age, sex, and mode of transport
+
+These tables are linked via a unique accident index.
+
+
+We are interested in creating clusters of like authorities based on the kinds of collisions that occur in their area.  You have been given a count of the number of collisions at Mini-roundabout, in the Rain, in the Dark, when the road is Dry, in an urban setting and where the most seriously injured casualty was reported as having a slight injury.
+
+Some previous cluster analysis work has been reported at:
+
+- [ Cluster analysis](https://ijirt.org/publishedpaper/IJIRT175966_PAPER.pdf)
+- [More cluster analysis](https://www.researchgate.net/publication/357727987_Identification_of_Traffic_Accident_Patterns_via_Cluster_Analysis_and_Test_Scenario_Development_for_Autonomous_Vehicles/fulltext/61dcdc17034dda1b9eebd63d/Identification-of-Traffic-Accident-Patterns-via-Cluster-Analysis-and-Test-Scenario-Development-for-Autonomous-Vehicles.pdf)
+
+
+## The Data
+
+The first thing we can do is consider a scatterplot of the data
+
+![](../../data_cache/vignettes/unsupervised_classification/scatterplot.html){width="100%" height="600px"}
+
+We are going to use the proportion of each subtype of collision that was reported, and rescale the variables.
+
+
+## Hierarchical clustering
+
+
+The first task is to perform hierarchical clustering.
+
+![](../../data_cache/vignettes/unsupervised_classification/dendrogram.html){width="100%" height="600px"}
+
+
+You need to select a suitable ``cut-point'' and cut the tree at an appropriate height to form a number of clusters.
+
+To aid visualisation of results, you should plot the cluster membership on a scatterplot of the first two principal components.
+
+
+![](../../data_cache/vignettes/unsupervised_classification/kscatter.html){width="100%" height="600px"}
+
+
+## kmeans clustering
+
+
+The second task is to perform k-means clustering. You should select an appropriate number of clusters.
+First, you should look at the cluster centroids:
+
+
+![](../../data_cache/vignettes/unsupervised_classification/kcentroids1.html){width="100%" height="600px"}
+
+
+![](../../data_cache/vignettes/unsupervised_classification/kcentroids2.html){width="100%" height="600px"}
+
+
+As before you should plot the cluster membership on a scatterplot of the first two principal components.
+
+![](../../data_cache/vignettes/unsupervised_classification/kscatter.html){width="100%" height="600px"}
+
+
+
+
+
+##  Additional credit
+
+For additional credit you should consider adding a further unsupervised classification method. Alternatively, you could increase the number of variables used in the clustering.
+
+
+
+## Record of AI use for MTHM503 unsupervised coursework
+
+Instructions: You can use this document to record when, how and why you used GenAI to complete your assessment. It will help you create a record of AI use to submit alongside your references for AI-integrated and AI-assisted assignments. It may also be useful to help you discuss your AI use if you are required to do so in an academic conduct meeting.
+
+| **Date**       | **AI tool used** | **Purpose**                                | **Prompt**                                 | **Hyperlink to output (where possible)** | **Section of work used for** |
+|----------------|------------------|--------------------------------------------|--------------------------------------------|------------------------------------------|-------------------------------|
+| E.g. 15/07/2025| MS Copilot       | To help create an organised essay structure| ‘Generate ideas for structuring an essay on...’ | [insert link]                          | introduction                  |
+|                |                  |                                            |                                            |                                          |                               |
+|                |                  |                                            |                                            |                                          |                               |
+|                |                  |                                            |                                            |                                          |                               |
+|                |                  |                                            |                                            |                                          |                               |
+|                |                  |                                            |                                            |                                          |                               |
+|                |                  |                                            |                                            |                                          |                               |
+|                |                  |                                            |                                            |                                          |                               |
+|                |                  |                                            |                                            |                                          |                               |
+
+
+

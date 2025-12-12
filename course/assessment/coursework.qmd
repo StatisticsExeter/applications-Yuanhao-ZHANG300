@@ -1,0 +1,116 @@
+---
+title: "MTHM053 Applications of Data Science and Statistics – Coursework Brief"
+author: "Paul Hewson, University of Exeter"
+date: "2025-10-30"
+format: html
+self-contained: true
+---
+
+*Deadline 12th December 12:00*
+
+# Overview
+
+This coursework assesses your ability to build, validate, and communicate a set of applied data science models using R. You will complete three core analytical tasks (supervised classification, regression modelling, and unsupervised learning) all within a fully **reproducible pipeline**.  Although this task is to be completed individually, you should consider it as replicating the kind of environment you would find in a production system, where engineers would be helping you with a framework and pipelines, and you would concentrate on the data science/analysis.
+
+## Objectives
+
+By completing this coursework, you will demonstrate:
+
+- Supervised learning skills (classification, regression, model selection)
+
+- Unsupervised learning skills (dimension reduction and clustering)
+
+- Reproducible workflow design using `conda`, `doit`, `git`, and `pytest`
+
+- Clear and structured scientific communication via `quarto`
+
+---
+
+
+## You are provided with:
+
+- A bash script `run` with options which include 
+   - `run check` which ensures your `conda` environment and your database access have been set up correctly, 
+   - `run cwk` which will run unit tests and the flake8 linter and 
+   - `run reports` which will execute the pipelines.
+   - Important note. On University Windows PCs you have to run this script under the Anaconda prompt and you have to specify the full path to  `bash`. In other words, you need to open the Anaconda prompt, activate your `conda` environement `conda activate python-exercises` and type `"C:\Program Files\Git\bin\bash.exe run reports`. In the Rstudio terminal and in a proper bash shell you can just type `./run reports` HOWEVER, the pipelines are prone to segfaulting when running on University Windows PCs under the RStudio terminal. There are various known windows memory issues, you can avoid a lot of stress if you use the Anaconda prompt.
+- Three `dodo_*.py` files (`dodo_supervised.py`, `dodo_unsupervised_py` and `dodo_regression.py`) that define a skeleton pipeline for each task.
+- A set of Python functions that are called by this pipeline. These functions are in folders `course/supervised`, `course/unsupervised` and `course/regression`.  Note that some key functions are incomplete but have associated unit tests.
+- Quarto report templates for each task (`vignettes/coursework_supervised.qmd`, `vignettes/coursework_unsupervised.qmd`, `vignettes/coursework_regression.qmd`), which include background on the data and structure for your interpretation.
+
+Your task is to:
+
+- Implement the missing functions so that the pipeline runs successfully.
+  For example, in file `course/supervised_classification/eda.py` you are given the following:
+  
+  ```python
+  def _scatter(df, title):
+    """When called with dataframe 'df' and a string 'title'
+    Return a plotlty express object which is a scatterplot of all numeric variables 
+    in the dataframe. The title should be as provided in the function call"""
+  ```
+  
+  You need to write a function using `Plotly` (express) which returns a scatterplot of all the variables we are using as input for our unsupervised classification. 
+  
+- Activate an additional GitHub action by creating an empty text file called `COURSEWORK` in your parent folder and commiting this to your repository.
+- Commit your code to your GitHub repository where GitHub actions will check that the unit tests are passing and that your code is well formatted
+- Run the pipeline using (In Anaconda Prompt this can be done by calling `C:\Program Files\Git\bin\bash.exe run reports`).
+- Open the Quarto reports in RStudio, adding up to 1,000 words of interpretation per topic and Render them.
+- Extend the pipeline with additional analysis, techniques, or outputs if aiming for higher marks. This could include:
+  - Additional exploratory data analysis (EDA)
+  - Alternative models (e.g. decision trees, random forests)
+  - Enhanced visualizations or metrics
+
+
+
+## Submission Instructions
+
+Remember, you need to share your repository with the module convener (`phewson` on GitHub).  You will be awarded zero credit for your code if I can't see the repository.
+
+- You need to obtain the `actions_report.zip` from your GitHub repository. This will only contain the additional checks if you pushed a file called `COURSEWORK` so make sure you've done that.
+- You should have three HTML reports on your own PC that you obtain from rendering your `qmd` files: `vignettes/coursework_supervised.html`, `vignettes/coursework_unsupervised.html`, `vignettes/coursework_regression.html`
+- Zip these four files together and upload them ELE by the deadline.
+
+
+## Assessment Criteria
+
+
+| Criterion               | Description                                                                                   | Weight |
+|------------------------|-----------------------------------------------------------------------------------------------|--------|
+| **Function Implementation** | Completion and correctness of the key functions. Code should be readable, efficient, and pass all provided unit tests and mostly pass all flake8 checks. | 20    |
+| **Pipeline Execution**     | Successful compilation and execution of the data pipeline using the provided tooling.       | 10    |
+| **Report Quality**         | Clarity, structure, and completeness of the Quarto reports. Includes appropriate use of visualizations and outputs from the pipeline. | 10    |
+| **Interpretation & Insight** | Depth and relevance of your written interpretation (up to 1,000 words per topic). Demonstrates understanding of the data and techniques. | 20    |
+| **Extension & Initiative** | Evidence of going beyond the skeleton pipeline. Includes additional EDA, alternative models, or enhanced outputs. | 20    |
+
+
+## AI
+
+AI guidance for the university is available <https://libguides.exeter.ac.uk/AI>. This coursework is AI-Assisted - where you may use GenAI tools ethically and responsibly to assist in the development of an assessment. In AI-assisted assessments, you must include the prompts and links used in your list of references if you use GenAI tools. Each report template (`vignettes/coursework_supervised.qmd`, `vignettes/coursework_unsupervised.qmd`, `vignettes/coursework_regression.qmd`) contains a table you must complete when you use AI.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
