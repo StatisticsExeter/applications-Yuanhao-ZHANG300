@@ -1,0 +1,157 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, python_private ]
+  pull_request:
+    branches: [ main, python_private ]
+
+jobs:
+  test:
+    if: ${{(github.repository == 'phewson/mthm503' && github.ref == 'refs/heads/python_private') || (github.repository != 'phewson/mthm503' && github.ref == 'refs/heads/main')}}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Cache Conda environment
+        uses: actions/cache@v4
+        with:
+          path: /usr/share/miniconda3/envs/python-exercises
+          key: conda-${{ runner.os }}-${{ hashFiles('environment.yml') }}
+          restore-keys: |
+            conda-${{ runner.os }}-
+
+      - name: Set up Miniconda
+        uses: conda-incubator/setup-miniconda@v2
+        with:
+          miniconda-version: 'latest'
+          channels: conda-forge
+          environment-file: environment.yml
+          activate-environment: python-exercises
+          auto-activate-base: false
+          use-only-tar-bz2: true
+
+      - name: Set up Quarto
+        uses: quarto-dev/quarto-actions/setup@v2
+        with:
+          version: 1.4.550
+
+      - name: Run tests for intro topic
+        run: |
+          conda run -n python-exercises pytest course/intro/tests --ignore=intro/tests/test_db_connection.py | fold -s -w 72 | tee intro_tests_output.txt
+          echo "${PIPESTATUS[0]}" > intro_tests_status.txt
+
+      - name: Run flake8 linter for intro topic
+        run: |
+          echo "Running flake8..." | tee intro_flake8_output.txt
+          conda run -n python-exercises flake8 course/intro --exit-zero | fold -s -w 72 | tee -a intro_flake8_output.txt
+          echo "${PIPESTATUS[0]}" > intro_lint_status.txt
+          echo "flake8 completed at $(date)" | tee -a intro_flake8_output.txt
+        
+      - name: Run doit pipeline for intro topic
+        run: | 
+          conda run -n python-exercises doit -f dodo_ict_unsupervised.py | fold -s -w 72 | tee -a intro_pipeline_output.txt
+          echo "${PIPESTATUS[0]}" > intro_pipeline_status.txt
+
+      - name: Run pytest on regression if COURSEWORK exists
+        if: ${{ hashFiles('COURSEWORK') != '' }}
+        run: |
+          conda run -n python-exercises pytest course/regression |  fold -s -w 72 | tee regression_tests_output.txt
+          echo "${PIPESTATUS[0]}" > regression_tests_status.txt
+          
+      - name: Run pytest on supervised if COURSEWORK exists
+        if: ${{ hashFiles('COURSEWORK') != '' }}
+        run: |
+          conda run -n python-exercises pytest course/supervised_classification |  fold -s -w 72 | tee supervised_tests_output.txt
+          echo "${PIPESTATUS[0]}" > supervised_tests_status.txt
+          
+      - name: Run pytest on unsupervised if COURSEWORK exists
+        if: ${{ hashFiles('COURSEWORK') != '' }}
+        run: |
+          conda run -n python-exercises pytest course/unsupervised_classification |  fold -s -w 72 | tee unsupervised_tests_output.txt
+          echo "${PIPESTATUS[0]}" > unsupervised_tests_status.txt
+
+      - name: Run flake8 linter on regression if COURSEWORK exists
+        if: ${{ hashFiles('COURSEWORK') != '' }}
+        run: |
+          echo "Running flake8..." | tee regression_flake8_output.txt
+          conda run -n python-exercises flake8 course/regression --exit-zero | fold -s -w 72 | tee -a regression_flake8_output.txt
+          echo "${PIPESTATUS[0]}" > regression_lint_status.txt
+          echo "flake8 completed at $(date)" | tee -a regression_flake8_output.txt
+          
+      - name: Run flake8 linter on supervised if COURSEWORK exists
+        if: ${{ hashFiles('COURSEWORK') != '' }}
+        run: |
+          echo "Running flake8..." | tee supervised_flake8_output.txt
+          conda run -n python-exercises flake8 course/supervised_classification --exit-zero | fold -s -w 72 | tee -a supervised_flake8_output.txt
+          echo "${PIPESTATUS[0]}" > supervised_lint_status.txt
+          echo "flake8 completed at $(date)" | tee -a supervised_flake8_output.txt
+          
+      - name: Run flake8 linter on unsupervised if COURSEWORK exists
+        if: ${{ hashFiles('COURSEWORK') != '' }}
+        run: |
+          echo "Running flake8..." | tee unsupervised_flake8_output.txt
+          conda run -n python-exercises flake8 course/unsupervised_classification --exit-zero | fold -s -w 72 | tee -a unsupervised_flake8_output.txt
+          echo "${PIPESTATUS[0]}" > unsupervised_lint_status.txt
+          echo "flake8 completed at $(date)" | tee -a unsupervised_flake8_output.txt
+          
+      - name: Run flake8 linter on dodo files if COURSEWORK exists
+        if: ${{ hashFiles('COURSEWORK') != '' }}
+        run: |
+          echo "Running flake8..." | tee dodo_flake8_output.txt
+          conda run -n python-exercises flake8 dodo*.py --exit-zero | fold -s -w 72 | tee -a dodo_flake8_output.txt
+          echo "${PIPESTATUS[0]}" > dodo_lint_status.txt
+          echo "flake8 completed at $(date)" | tee -a dodo_flake8_output.txt
+        
+      - name: Generate PDF report
+        if: hashFiles('COURSEWORK') == ''
+        run: |
+          pip install pymupdf
+          python .github_ict_report.py
+
+      - name: Generate coursework test and lint
+        if: hashFiles('COURSEWORK') != ''
+        run: |
+          pip install pymupdf
+          python .github_cw_report.py
+
+      - name: Upload CI report PDF
+        uses: actions/upload-artifact@v4
+        with:
+          name: actions_report
+          path: | 
+            ci_report.pdf
+            vignettes/unsupervised/unsupervised_classification.html
+          
+
+      - name: Evaluate intro topic results
+        run: |
+          intro_status=$(cat intro_tests_status.txt)
+          intro_lint=$(cat intro_lint_status.txt)
+          intro_pipeline=$(cat intro_pipeline_status.txt)
+          if [ "$intro_status" -ne 0 ] || [ "$intro_lint" -ne 0 ] || [ "$intro_pipeline" -ne 0 ]; then
+            echo "Intro topic checks failed."
+            exit 1
+          else
+            echo "Intro topic checks passed."
+          fi
+
+
+      - name: Evaluate results
+        if: ${{ hashFiles('COURSEWORK') != '' }}
+        run: |
+          regression_status=$(cat regression_tests_status.txt)
+          supervised_status=$(cat supervised_tests_status.txt)
+          unsupervised_status=$(cat unsupervised_tests_status.txt)
+          regression_lint=$(cat regression_lint_status.txt)
+          supervised_lint=$(cat supervised_lint_status.txt)
+          unsupervised_lint=$(cat unsupervised_lint_status.txt)
+
+          if [ "$regression_status" -ne 0 ] || [ "$supervised_status" -ne 0 ] || [ "$unsupervised_status" -ne 0 ] || \
+             [ "$regression_lint" -ne 0 ] || [ "$supervised_lint" -ne 0 ] || [ "$unsupervised_lint" -ne 0 ]; then
+            echo "One or more coursework checks failed."
+            exit 1
+          else
+            echo "All coursework checks passed."
+          fi
