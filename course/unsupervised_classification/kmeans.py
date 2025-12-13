@@ -19,24 +19,34 @@ def _kmeans(df, k: int) -> KMeans:
     return model
 
 
-def kmeans(k):
-    base_dir = find_project_root()
-    df = pd.read_csv(base_dir / "data_cache" / "la_collision.csv")
-    scaler = StandardScaler()
-    df_scaled = scaler.fit_transform(df)
-    kmeans = _kmeans(df_scaled, k)
-    clusters = kmeans.labels_
-    scaled_centers = kmeans.cluster_centers_
-    fig1, fig2 = _plot_centroids(scaled_centers, scaler, df.columns, k)
-    outpath1 = base_dir / VIGNETTE_DIR / "kcentroids1.html"
-    outpath2 = base_dir / VIGNETTE_DIR / "kcentroids2.html"
-    fig1.write_html(outpath1)
-    fig2.write_html(outpath2)
-    df_plot = _pca(df_scaled)
-    df_plot["cluster"] = clusters.astype(str)  # convert to string for color grouping
-    outpath = base_dir / VIGNETTE_DIR / "kscatter.html"
-    fig = _scatter_clusters(df_plot)
-    fig.write_html(outpath)
+def kmeans(n_clusters: int = 4):
+    """
+    课程流水线用的函数：
+    1. 读取 data_cache/energy.csv
+    2. 只选数值特征做标准化和聚类
+    3. 把聚类标签写回原始 df 的 'cluster' 列
+    4. 存成 data_cache/energy_kmeans.csv
+    """
+    data_path = Path("data_cache/energy.csv")
+    df = pd.read_csv(data_path)
+
+    # ---- 1. 选取特征列：去掉 ID 和已有的 cluster 列，只保留数值列 ----
+    feature_df = df.drop(columns=["lad_cd", "cluster"], errors="ignore")
+    feature_df = feature_df.select_dtypes(include="number")
+
+    # ---- 2. 调用已经通过测试的 _kmeans 做聚类 ----
+    model = _kmeans(feature_df, n_clusters)
+
+    # ---- 3. 把标签写回原始 df ----
+    df["cluster"] = model.labels_
+
+    # ---- 4. 写出带聚类结果的缓存文件，供后续 tree / 报告使用 ----
+    out_path = Path("data_cache/energy_kmeans.csv")
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    df.to_csv(out_path, index=False)
+
+    # doit 要求 Python action 返回 True / None / 字符串 / dict
+    return True
 
 
 def _plot_centroids(scaled_centers, scaler, colnames, k):  # Melt for grouped bar plot

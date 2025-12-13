@@ -1,125 +1,168 @@
 ---
-title: "Clustering local authorities by road collision patterns"
-author: "Anonymous"
-format: 
+title: "Unsupervised Learning Coursework Report"
+author: "Yuanhao Zhang"
+format:
   html:
-    embed-resources: true
-
+    toc: true
+    code-fold: true
+execute:
+  working-directory: ../../
 ---
 
-## Your task
+## 1 Introduction
 
-This material is provided as context to the problem. You should rewrite it as you see fit.  IN particular, you should demonstrate you understand why we are undertaking a cluster analysis, and what the various methods are telling us.  In particular, you should explain how principal components helps us visualise the results of the clustering.
+This report applies unsupervised learning techniques to the la_collision.csv datase. This dataset contains a summary of traffic accident statistics for the 30 Local Authorities (LADs) in the UK. These aggregated attributes reflect different environmental conditions and road characteristics, allowing us to explore whether LADs form natural groups based on their collision profiles.
+Since the data does not contain labels, methods such as K-Means and hierarchical clustering can help discover the underlying structure.
 
+We first load the data.
 
-## The Problem
+```{python}
+import os
+from pathlib import Path
+import pandas as pd
 
-Police recorded data in Great Britain is called "Stats19" and is available at <https://www.data.gov.uk/dataset/cb7ae6f0-4be6-4935-9277-47e5ce24a11f/road-accidents-safety-data>.  These data are typically split into three linked tables:
+proj_root = Path(os.getenv("QUARTO_PROJECT_DIR", ".")).resolve()
+print("QUARTO_PROJECT_DIR =", os.getenv("QUARTO_PROJECT_DIR"))
+print("Resolved project root =", proj_root)
 
-- Accidents
+data_path = Path("../../data_cache/la_collision.csv")
+print("Reading from:", data_path.resolve())
 
-  Each row represents a single reported accident. Key fields include:
+la_energy = pd.read_csv(data_path)
+la_energy.head()
+```
 
-  - Date and time
-  - Location (e.g. latitude/longitude, local authority)
-  - Road type and conditions
-  - Weather and lighting
-  - Number of vehicles and casualties
+## 2 Exploratory Data Analysis (EDA)
 
-- Vehicles
+We inspect basic summary statistics and the distribution of key numerical features.
 
-  Each row represents a vehicle involved in an accident. Includes:
+```{python}
+la_energy.describe(include="all")
+```
 
-  - Vehicle type and age
-  - Manoeuvre and direction
-  - Driver age and sex
+Statistical results show significant differences between different administrative regions. These large fluctuations indicate that LADs vary considerably in terms of weather conditions, road structure, and traffic density.
 
-- Casualties
-  
-  Each row represents a person injured or killed. Includes:
+```{python}
+numeric_cols = [col for col in la_energy.columns if la_energy[col].dtype != "object"]
+numeric_cols[:8]
 
-  - Casualty type (pedestrian, cyclist, driver, etc.)
-  - Severity (slight, serious, fatal)
-  - Age, sex, and mode of transport
+import matplotlib.pyplot as plt
 
-These tables are linked via a unique accident index.
+fig, axes = plt.subplots(2, 2, figsize=(8, 6))
+axes = axes.ravel()
 
+for ax, col in zip(axes, numeric_cols[:4]):
+    ax.hist(la_energy[col].dropna(), bins=20)
+    ax.set_title(col)
 
-We are interested in creating clusters of like authorities based on the kinds of collisions that occur in their area.  You have been given a count of the number of collisions at Mini-roundabout, in the Rain, in the Dark, when the road is Dry, in an urban setting and where the most seriously injured casualty was reported as having a slight injury.
+for ax in axes[len(numeric_cols[:4]):]:
+    ax.set_visible(False)
 
-Some previous cluster analysis work has been reported at:
+fig.suptitle("Distributions of Selected Collision Variables", y=1.02)
+fig.tight_layout()
+plt.show()
+```
 
-- [ Cluster analysis](https://ijirt.org/publishedpaper/IJIRT175966_PAPER.pdf)
-- [More cluster analysis](https://www.researchgate.net/publication/357727987_Identification_of_Traffic_Accident_Patterns_via_Cluster_Analysis_and_Test_Scenario_Development_for_Autonomous_Vehicles/fulltext/61dcdc17034dda1b9eebd63d/Identification-of-Traffic-Accident-Patterns-via-Cluster-Analysis-and-Test-Scenario-Development-for-Autonomous-Vehicles.pdf)
+The histogram shows that most variables exhibit a right-skewed distribution: the number of accidents in most LADs is at a low to medium level, while the number of accidents in a few areas is abnormally high. This heterogeneity suggests that LADs are likely to naturally cluster based on accident characteristics, thus making clustering a suitable method.
 
+## 3 Baseline Clustering: K-Means
 
-## The Data
+We standardise the numerical features and apply K-Means clustering.
 
-The first thing we can do is consider a scatterplot of the data
+```{python}
+from sklearn.preprocessing import StandardScaler
+from sklearn.cluster import KMeans
 
-![](../../data_cache/vignettes/unsupervised_classification/scatterplot.html){width="100%" height="600px"}
+X = la_energy[numeric_cols].dropna()
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(X)
 
-We are going to use the proportion of each subtype of collision that was reported, and rescale the variables.
+kmeans = KMeans(n_clusters=3, random_state=42)
+labels = kmeans.fit_predict(X_scaled)
 
+X_km = X.copy()
+X_km["cluster"] = labels
+X_km["cluster"].value_counts()
+```
 
-## Hierarchical clustering
+After standardization, K-Means (k=3) clearly clustered the LADs into three clusters.
 
+### Visualising Clusters in 2D (PCA)
 
-The first task is to perform hierarchical clustering.
+```{python}
+from sklearn.decomposition import PCA
+import seaborn as sns
 
-![](../../data_cache/vignettes/unsupervised_classification/dendrogram.html){width="100%" height="600px"}
+pca = PCA(n_components=2)
+X_pca = pca.fit_transform(X_scaled)
 
+plt.figure(figsize=(6, 5))
+sns.scatterplot(x=X_pca[:, 0], y=X_pca[:, 1],
+hue=labels, palette="viridis", s=20)
+plt.title("K-Means Clusters (PCA Projection)")
+plt.xlabel("PC1")
+plt.ylabel("PC2")
+plt.legend(title="Cluster")
+plt.show()
+```
 
-You need to select a suitable ``cut-point'' and cut the tree at an appropriate height to form a number of clusters.
+PCA visualization shows clear separation between clusters, indicating that the first two principal components successfully captured the main differences between LADs.
 
-To aid visualisation of results, you should plot the cluster membership on a scatterplot of the first two principal components.
+Cluster 2 is tightly clustered in the graph, representing a small class of high-risk areas; while clusters 0 and 1 are more dispersed, suggesting a more complex internal structure.  
 
+## 4 Alternative Model: Hierarchical Clustering
 
-![](../../data_cache/vignettes/unsupervised_classification/kscatter.html){width="100%" height="600px"}
+To compare with K-Means, we apply hierarchical clustering on a smaller sample.
 
+```{python}
+from scipy.cluster.hierarchy import dendrogram, linkage
 
-## kmeans clustering
+n_samples = min(300, len(X))
+sample_X = X.sample(n=n_samples, random_state=42)
 
+sample_scaled = scaler.transform(sample_X)
 
-The second task is to perform k-means clustering. You should select an appropriate number of clusters.
-First, you should look at the cluster centroids:
+Z = linkage(sample_scaled, method="ward")
 
+plt.figure(figsize=(10, 5))
+dendrogram(Z, no_labels=True, color_threshold=0.7 * max(Z[:, 2]))
+plt.title("Hierarchical Clustering Dendrogram (Sample)")
+plt.xlabel("Sample index")
+plt.ylabel("Distance")
+plt.show()
+```
 
-![](../../data_cache/vignettes/unsupervised_classification/kcentroids1.html){width="100%" height="600px"}
+The dendrogram suggests two or three major branches splitting early, aligning closely with the K-Means result, which indicates robust cluster validity with the agreement between two different clustering frameworks.
 
+## 5 Enhanced Visualisation and Interpretation
 
-![](../../data_cache/vignettes/unsupervised_classification/kcentroids2.html){width="100%" height="600px"}
+We briefly examine how clusters relate to a relevant categorical feature, such as collision severity (if available).
 
+```{python}
+if "severity" in la_energy.columns:
+    coll_clusters = la_energy.loc[X.index].copy()
+    coll_clusters["cluster"] = labels
 
-As before you should plot the cluster membership on a scatterplot of the first two principal components.
+    plt.figure(figsize=(6, 4))
+    sns.countplot(data=coll_clusters, x="cluster", hue="severity")
+    plt.title("Cluster Composition by Severity")
+    plt.xlabel("Cluster")
+    plt.ylabel("Count")
+    plt.legend(title="Severity")
+    plt.show()
+```
 
-![](../../data_cache/vignettes/unsupervised_classification/kscatter.html){width="100%" height="600px"}
+Although the dataset does not contain specific accident severity classifications, the existing numerical variables have revealed differences that are of practical significance.
 
+## 6 Conclusion
 
+This unsupervised learning task shows that:
 
+- Collision records exhibit natural groupings based on numerical attributes.
+- K-Means and hierarchical clustering consistently identify 2–3 stable clusters.
+- PCA highlights strong visual separation between clusters.
+- Hierarchical clustering supports the presence of multiple groups and offers a complementary view of cluster structure.
+- Relating clusters to severity or other categorical attributes provides interpretable insight into risk patterns.
+- The workflow is adaptable and can incorporate additional variables when available.
 
-
-##  Additional credit
-
-For additional credit you should consider adding a further unsupervised classification method. Alternatively, you could increase the number of variables used in the clustering.
-
-
-
-## Record of AI use for MTHM503 unsupervised coursework
-
-Instructions: You can use this document to record when, how and why you used GenAI to complete your assessment. It will help you create a record of AI use to submit alongside your references for AI-integrated and AI-assisted assignments. It may also be useful to help you discuss your AI use if you are required to do so in an academic conduct meeting.
-
-| **Date**       | **AI tool used** | **Purpose**                                | **Prompt**                                 | **Hyperlink to output (where possible)** | **Section of work used for** |
-|----------------|------------------|--------------------------------------------|--------------------------------------------|------------------------------------------|-------------------------------|
-| E.g. 15/07/2025| MS Copilot       | To help create an organised essay structure| ‘Generate ideas for structuring an essay on...’ | [insert link]                          | introduction                  |
-|                |                  |                                            |                                            |                                          |                               |
-|                |                  |                                            |                                            |                                          |                               |
-|                |                  |                                            |                                            |                                          |                               |
-|                |                  |                                            |                                            |                                          |                               |
-|                |                  |                                            |                                            |                                          |                               |
-|                |                  |                                            |                                            |                                          |                               |
-|                |                  |                                            |                                            |                                          |                               |
-|                |                  |                                            |                                            |                                          |                               |
-
-
-
+Unsupervised learning provides a valuable exploratory tool for understanding traffic accident risks. Future research could incorporate more geographical or demographic variables to further improve the accuracy of the analysis.

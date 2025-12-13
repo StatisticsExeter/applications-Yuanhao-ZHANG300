@@ -1,94 +1,181 @@
 ---
-title: "Understanding costs"
-author: "Anonymous"
-format: 
+title: "Regression Coursework Report"
+author: "Yuanhao Zhang"
+format:
   html:
-    embed-resources: true
-    math: mathjax
-
+    toc: true
+    code-fold: true
+execute:
+  working-directory: ../../
 ---
 
+## 1 Introduction
 
-
-## Your task
-
-This material is provided as context to the problem. You should rewrite it as you see fit.
-
-## The Problem
-
-Data on [Energy Certificates](https://epc.opendatacommunities.org/) were downloaded in March 2025. These certificates are a non-random sample of UK housing, and contain information such as:
-
-- Property energy efficiency: The core data is the energy efficiency rating, which ranges from A (most efficient) to G (least efficient).
-- CO2 emissions: The data includes information on the building's likely carbon dioxide emissions.
-- Energy costs: Potential costs for heating and lighting the property are provided.
-- Improvement recommendations: Each EPC lists cost-effective ways to improve the building's energy performance.
-
-We have been asked by a local company to determine whether some local authorities are better than others in terms of reducing the carbon footprint of properties in their area.  However, some authorities have older housing stock which is innately has a larger carbon footprint. Likewise, some have larger properties than others.  The initial brief is to carry out an aggregate data analysis where the unit of analysis is a local authority.  We have been asked to consider the average carbon footprint of a house in a given area conditional on being pre- or post-1930 and having between 1 and 10 heated rooms.  This should let you fit a model which has fixed effects for the number of houses of pre-1930, post-1930 and 1, 2, 3, ..., 10 heated rooms
-
-
-$$Y_{ji} = \beta_0 + \beta_1 x_{j}^{(\text{old})} + \sum_{r=1}^{10} \beta_r x_{j}^{(r)} + \gamma_j$$
-
-Where 
-
-- $Y_{ji}$ is the average carbon dioxide emissions for authority $j$ for each house type $i$ (old/new, 1, 2, ..., 10 rooms)
-- $x_{j}^{(old)}$ is the number of houses that are older than 1930 in authority $j$
-- $x_{j}^r$ are the number of houses with $r=1, 2, ..., 10$ rooms in authority $j$ 
-- $\beta_0$, $\beta_1$, $\beta_r$ are the fixed effects
-- $\gamma_j$ is the random effect for local authority $j$
-
-
-
-
-## The Data
-
-Some initial exploratory data analysis shows us how the carbon emissions vary by age of property and by the number of rooms:
-
-
-
-![](../../data_cache/vignettes/regression/boxplot_age.html){width="100%" height="600px"}
-
-![](../../data_cache/vignettes/regression/boxplot_rooms.html){width="100%" height="600px"}
-
-
-## The model
-
-A model can be fitted and a summary of the fixed effects produced
-
+This report analyses the dataset la_energy.csv, which provides information on housing energy shortfall and related household characteristics.
+The goal is to build regression models that predict a continuous energy-related variable.
+Based on automatic feature selection, the variable n (representing household sample size per category) was selected as the regression target. This analysis explores the dataset’s correlations, evaluates predictive accuracy, and highlights which factors most influence energy outcomes.
 
 ```{python}
-#| echo: false
-#| eval: true
-#| results: 'asis'
-with open('../../data_cache/vignettes/regression/model_fit.txt') as f:
-    content = f.read()
-    print(content)
+import os
+from pathlib import Path
+import pandas as pd
+
+print("CWD =", os.getcwd())
+
+proj_root = Path(os.getenv("QUARTO_PROJECT_DIR", ".")).resolve()
+print("QUARTO_PROJECT_DIR =", os.getenv("QUARTO_PROJECT_DIR"))
+print("Resolved project root =", proj_root)
+
+data_path = Path("../../data_cache/la_energy.csv")
+print("Reading from:", data_path.resolve())
+
+la_energy = pd.read_csv(data_path)
+la_energy.head()
 ```
 
+## 2 Exploratory Data Analysis (EDA)
 
-## The key insight
+We inspect summary statistics for the main numerical variables.
 
-We've been asked to rate local authority performance, so the most important result is a ``caterpillar plot'' of the random effects.
+```{python}
+la_energy.describe()
+```
 
+### Correlation Structure
 
-![](../../data_cache/vignettes/regression/caterpillar.html){width="100%" height="600px"}
+```{python}
+import seaborn as sns
+import matplotlib.pyplot as plt
 
-##  Additional credit
+numeric_cols = la_energy.select_dtypes(include="number").columns
+corr_mat = la_energy[numeric_cols].corr()
 
-For additional credit you might like to enhance the exploratory data analysis. You could consider residual diagnostics to check the validity of the model fit. You may also like to consider the appropriateness of the adjusting variables age and number of rooms. You could consider extracting further variables from the database and fitting a slightly more elaborate model.
+plt.figure(figsize=(6, 5))
+sns.heatmap(corr_mat, cmap="coolwarm", annot=False)
+plt.title("Correlation Matrix of LA Energy Variables")
+plt.show()
+```
 
+The related heatmap generated shows:
 
-## Record of AI use for MTHM503 Regression coursework
+- shortfall and n have a weak correlation.
+- n_rooms and n show some positive association: more rooms often correspond to larger household counts.
+- No extremely strong correlations are observed, but some multicollinearity may exist among numeric variables.
 
-Instructions: You can use this document to record when, how and why you used GenAI to complete your assessment. It will help you create a record of AI use to submit alongside your references for AI-integrated and AI-assisted assignments. It may also be useful to help you discuss your AI use if you are required to do so in an academic conduct meeting.
+## 3 Baseline Model: Linear Regression
 
-| **Date**       | **AI tool used** | **Purpose**                                | **Prompt**                                 | **Hyperlink to output (where possible)** | **Section of work used for** |
-|----------------|------------------|--------------------------------------------|--------------------------------------------|------------------------------------------|-------------------------------|
-| E.g. 15/07/2025| MS Copilot       | To help create an organised essay structure| ‘Generate ideas for structuring an essay on...’ | [insert link]                          | introduction                  |
-|                |                  |                                            |                                            |                                          |                               |
-|                |                  |                                            |                                            |                                          |                               |
-|                |                  |                                            |                                            |                                          |                               |
-|                |                  |                                            |                                            |                                          |                               |
-|                |                  |                                            |                                            |                                          |                               |
-|                |                  |                                            |                                            |                                          |                               |
-|                |                  |                                            |                                            |                                          |                               |
-|                |                  |                                            |                                            |                                          |                               |
+We treat a chosen continuous variable (for example, consumption) as the target and
+use other numerical variables as features.
+
+```{python}
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import mean_squared_error, r2_score
+
+numeric_cols = la_energy.select_dtypes(include="number").columns.tolist()
+
+candidate_targets = [
+    c for c in numeric_cols
+    if ("energy" in c.lower()) or ("kwh" in c.lower())
+]
+
+if candidate_targets:
+    target_col = candidate_targets[0]
+else:
+    target_col = numeric_cols[-1]
+
+print("Chosen target column:", target_col)
+
+feature_cols = [c for c in numeric_cols if c != target_col]
+
+X = la_energy[feature_cols].dropna()
+y = la_energy.loc[X.index, target_col]
+
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.3, random_state=42
+)
+
+lin_reg = LinearRegression()
+lin_reg.fit(X_train, y_train)
+y_pred_lin = lin_reg.predict(X_test)
+
+mse_lin = mean_squared_error(y_test, y_pred_lin)
+r2_lin = r2_score(y_test, y_pred_lin)
+
+mse_lin, r2_lin
+```
+
+The negative R² indicates that the linear model performs slightly worse than simply predicting the mean of n, which suggests no strong linear relationship exists between the selected features and the target variable.
+
+### Predicted vs Actual Plot
+
+```{python}
+plt.figure(figsize=(6,5))
+sns.scatterplot(x=y_test, y=y_pred_lin)
+plt.xlabel(f"Actual {target_col}")
+plt.ylabel(f"Predicted {target_col}")
+plt.title("Linear Regression Predictions")
+plt.show()
+```
+
+The scatterplot shows a wide vertical spread around the horizontal axis, confirming that linear regression struggles to capture the relationship. Predictions do not track the actual trend closely.
+
+## 4 Alternative Model: Random Forest Regression
+
+We now fit a Random Forest regressor on the same features.
+
+```{python}
+from sklearn.ensemble import RandomForestRegressor
+
+rf_reg = RandomForestRegressor(
+n_estimators=200,
+random_state=42
+)
+rf_reg.fit(X_train, y_train)
+y_pred_rf = rf_reg.predict(X_test)
+
+mse_rf = mean_squared_error(y_test, y_pred_rf)
+r2_rf = r2_score(y_test, y_pred_rf)
+
+mse_rf, r2_rf
+```
+
+Random forest usually performs better on non-linear tasks, but in this dataset its performance is also poor.
+
+### Feature Importance
+
+```{python}
+import numpy as np
+
+importances = rf_reg.feature_importances_
+order = np.argsort(importances)[::-1]
+
+plt.figure(figsize=(6, 4))
+sns.barplot(x=importances[order],
+y=[numeric_cols[i] for i in order])
+plt.title("Random Forest Feature Importance")
+plt.xlabel("Importance")
+plt.ylabel("Feature")
+plt.tight_layout()
+plt.show()
+```
+
+This means that variations in energy shortfall levels across housing categories carry more explanatory power for predicting the target variable (n) than housing size.
+Although overall model performance remains poor, this ranking indicates that energy-related scarcity is more closely associated with differences in household counts than the physical characteristics of the dwellings.
+
+This outcome suggests that households experiencing higher energy shortfall levels tend to cluster in categories with different population sizes, whereas room count provides only secondary structural information. Future models could benefit from incorporating additional socioeconomic or geographical indicators to better contextualise the shortfall variable.
+
+## 5 Conclusion
+
+This regression task indicates that:
+
+- Available features are weak predictors of the target variable n.
+- Both linear regression and random forest achieve poor R² values, implying limited explanatory power.
+- Feature importance reveals shortfall as the most influential predictor.
+
+Future improvements may include:
+
+ - Adding socioeconomic variables,
+ - Geographic indicators,
+ - Household-level energy consumption,
+ - Cross-validation and parameter tuning.
